@@ -22,7 +22,9 @@ class LinearRegression:
         self.epoch_limit = None
         self.hat_v_w = None
         self.hat_v_b = None
-    def fit(self,xs,ys,epochs = 100):
+        self.update_step = lambda: None
+        self.metrics = self.Metrics(self)
+    def fit(self,xs,ys,epochs = 100,optimizer = "RMSprop"):
         self.x = xs.copy()
         self.y = ys.copy()
         self.w = np.zeros(self.x.shape[1])
@@ -32,18 +34,27 @@ class LinearRegression:
         self.m_b = 0
         self.v_b = 0
         self._y = np.dot(self.x , self.w) + self.b
-        self.error = np.mean(self.y - self._y)
+        self.error = np.mean((self._y - self.y)**2)
         self.b_error = 2*np.mean(self._y - self.y)
         self.w_error = 2*np.dot(self.x.transpose(),self._y - self.y)/self.x.shape[0]
         self.epoch_limit = epochs
+        if optimizer == "adam":
+            update_step = self.adam
+        elif optimizer == "RMSprop":
+            update_step = self.RMSprop
+        elif optimizer == "momentum":
+            update_step = self.momentum
+        else:
+            raise ValueError(f"Unknown optimizer: {optimizer}")
         while self.epoch_count <= self.epoch_limit:
-            self.adam()
+            update_step()
             self._y = np.dot(self.x , self.w) + self.b
-            self.error = np.mean(self._y - self.y)
+            self.error = np.mean((self._y - self.y)**2)
             self.b_error = 2*np.mean(self._y - self.y)
             self.w_error = 2*np.dot(self.x.transpose(),self._y - self.y)/self.x.shape[0]
+            self.metrics = self.Metrics(self)
             self.epoch_count += 1
-            print("*"*(self.epoch_count//(self.epoch_limit // 100)),end = "\r")
+            print(f"Epochs {self.epoch_count -1} / {self.epoch_limit} | loss : {self.error}")
     def adam(self, beta1 = 0.9 , beta2 = 0.999 ,epsilon = 10**-8,gamma = 0.001):
         #momentum variables
         self.m_w = beta1*self.m_w + (1 - beta1)*self.w_error
@@ -63,6 +74,36 @@ class LinearRegression:
         #Updating the final value
         self.b = self.b - self.hat_m_b*self.r_v_b*gamma
         self.w = self.w - np.multiply(self.hat_m_w,self.r_v_w)*gamma
+    def RMSprop(self,beta2 = 0.999,epsilon = 10**-8, gamma = 0.001):
+        self.v_w = beta2*self.v_w + (1-beta2)*(self.w_error**2)
+        self.v_b = beta2*self.v_b + (1-beta2)*(self.b_error**2)
+        self.hat_v_w = self.v_w / (1 - beta2**self.epoch_count)
+        self.hat_v_b = self.v_b / (1 - beta2**self.epoch_count)
+        self.r_v_w = 1 / (np.sqrt(self.hat_v_w + epsilon))
+        self.r_v_b = 1 / (np.sqrt(self.hat_v_b + epsilon))
+        self.b = self.b - self.b_error*self.r_v_b*gamma
+        self.w = self.w - np.multiply(self.w_error,self.r_v_w)*gamma
+    def momentum(self,beta1 = 0.9 , gamma = 0.001):
+        self.m_w = beta1*self.m_w + (1 - beta1)*self.w_error
+        self.m_b = beta1*self.m_b + (1 - beta1)*self.b_error
+        self.hat_m_w = self.m_w / (1 - beta1**self.epoch_count)
+        self.hat_m_b = self.m_b / (1 - beta1**self.epoch_count)
+        self.b = self.b - self.hat_m_b*gamma
+        self.w = self.w - self.hat_m_w*gamma
     def predict(self,x):
         out = np.dot(x , self.w) + self.b
         return out
+    class Metrics:
+        def __init__(self,outer):
+            self.parameters = None
+            self.outer = outer
+            self.w = self.outer.w
+            self.b = self.outer.b
+        def params(self):
+            self.parameters = np.append(self.w , [self.b], axis = None)
+            return self.parameters
+        def r2_score(self, x, y):
+            y_pred = self.outer.predict(x)
+            ss_res = np.sum((y - y_pred) ** 2)
+            ss_tot = np.sum((y - np.mean(y)) ** 2)
+            return 1 - (ss_res / ss_tot)
