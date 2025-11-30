@@ -52,9 +52,9 @@ class LinearRegression:
             self.error = np.mean((self._y - self.y)**2)
             self.b_error = 2*np.mean(self._y - self.y)
             self.w_error = 2*np.dot(self.x.transpose(),self._y - self.y)/self.x.shape[0]
-            self.metrics = self.Metrics(self)
             self.epoch_count += 1
             print(f"Epochs {self.epoch_count -1} / {self.epoch_limit} | loss : {self.error}")
+        self.metrics = self.Metrics(self)
     def adam(self, beta1 = 0.9 , beta2 = 0.999 ,epsilon = 10**-8,gamma = 0.001):
         #momentum variables
         self.m_w = beta1*self.m_w + (1 - beta1)*self.w_error
