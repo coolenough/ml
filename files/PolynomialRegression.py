@@ -54,6 +54,8 @@ class PolynomialRegression:
             update_step = self.RMSprop
         elif self.optimiser == "momentum":
             update_step = self.momentum
+        elif self.optimiser == "gd":
+            update_step = self.gd
         else:
             raise ValueError(f"Unknown optimizer: {self.optimiser}")
         while self.epoch_count <= self.epoch_limit:
@@ -100,6 +102,9 @@ class PolynomialRegression:
         self.hat_m_b = self.m_b / (1 - beta1**self.epoch_count)
         self.b = self.b - self.hat_m_b*gamma
         self.w = self.w - self.hat_m_w*gamma
+    def gd(self,gamma = 0.005):
+        self.w = self.w - gamma*self.w_error
+        self.b = self.b - self.b_error*gamma
     def predict(self,x):
         x = self.transform(x)
         out = np.dot(x , self.w) + self.b

@@ -1,7 +1,7 @@
 import numpy as np
 class LinearRegression:
     # fit to pass data adam for optimization
-    def __init__(self):
+    def __init__(self,optimizer = "gd"):
         self.error = None
         self._y = None
         self.b = None
@@ -24,7 +24,8 @@ class LinearRegression:
         self.hat_v_b = None
         self.update_step = lambda: None
         self.metrics = self.Metrics(self)
-    def fit(self,xs,ys,epochs = 100,optimizer = "RMSprop"):
+        self.optimiser = optimizer
+    def fit(self,xs,ys,epochs = 100,):
         self.x = xs.copy()
         self.y = ys.copy()
         self.w = np.zeros(self.x.shape[1])
@@ -38,14 +39,16 @@ class LinearRegression:
         self.b_error = 2*np.mean(self._y - self.y)
         self.w_error = 2*np.dot(self.x.transpose(),self._y - self.y)/self.x.shape[0]
         self.epoch_limit = epochs
-        if optimizer == "adam":
+        if self.optimiser == "adam":
             update_step = self.adam
-        elif optimizer == "RMSprop":
+        elif self.optimiser == "RMSprop":
             update_step = self.RMSprop
-        elif optimizer == "momentum":
+        elif self.optimiser == "momentum":
             update_step = self.momentum
+        elif self.optimiser == "gd":
+            update_step = self.gd
         else:
-            raise ValueError(f"Unknown optimizer: {optimizer}")
+            raise ValueError(f"Unknown optimizer: {self.optimiser}")
         while self.epoch_count <= self.epoch_limit:
             update_step()
             self._y = np.dot(self.x , self.w) + self.b
@@ -90,6 +93,9 @@ class LinearRegression:
         self.hat_m_b = self.m_b / (1 - beta1**self.epoch_count)
         self.b = self.b - self.hat_m_b*gamma
         self.w = self.w - self.hat_m_w*gamma
+    def gd(self,gamma = 0.001):
+        self.w = self.w - gamma*self.w_error
+        self.b = self.b - self.b_error*gamma
     def predict(self,x):
         out = np.dot(x , self.w) + self.b
         return out
@@ -107,3 +113,6 @@ class LinearRegression:
             ss_res = np.sum((y - y_pred) ** 2)
             ss_tot = np.sum((y - np.mean(y)) ** 2)
             return 1 - (ss_res / ss_tot)
+        def corr(self,x,y):
+            y_pred = self.outer.predict(x)
+            return np.corrcoef(y_pred,y)

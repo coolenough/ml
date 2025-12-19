@@ -1,6 +1,7 @@
 import numpy as np
-class LogisticRegression():
+class LogisticRegression:
     def __init__(self):
+        self.optimizer = None
         self.hat_m_b = None
         self.hat_m_w = None
         self.r_v_b = None
@@ -23,13 +24,14 @@ class LogisticRegression():
     def predict(self,x):
         out = 1/(1 + np.exp(-(np.dot(x , self.w) + self.b)))
         return out
-    def fit(self,x,y,epochs = 100):
+    def fit(self,x,y,epochs = 100,optimizer = 'gd'):
         self.x = x
         self.y = y
         self.w = np.zeros(x.shape[1])
         self.b = 0
         self._y = self.predict(self.x)
         self.epoch_limit = epochs
+        self.optimizer = optimizer
         #initialized the momentum to avoid type error in first iteration
         self.v_w = np.zeros(self.x.shape[1])
         self.m_w = np.zeros(self.x.shape[1])
@@ -38,11 +40,22 @@ class LogisticRegression():
         #####
         self.b_error = -(np.mean(self.y - self._y))
         self.w_error = -(np.dot(self.x.transpose(),self.y - self._y))/self.x.shape[0]
+        if self.optimizer == "adam":
+            update_step = self.adam
+        elif self.optimizer == "RMSprop":
+            update_step = self.RMSprop
+        elif self.optimizer == "momentum":
+            update_step = self.momentum
+        elif self.optimizer == "gd":
+            update_step = self.gd
+        else:
+            raise ValueError(f"Unknown optimizer: {self.optimizer}")
         while self.epoch_count <= self.epoch_limit:
-            self.adam()
             self._y = self.predict(self.x)
             self.b_error = -(np.mean(self.y - self._y))
             self.w_error = -(np.dot(self.x.transpose(),self.y - self._y))/self.x.shape[0]
+            update_step()
+            print(f'Epoch : {self.epoch_count} Loss : ')
             self.epoch_count += 1
     def adam(self, beta1 = 0.9 , beta2 = 0.999 ,epsilon = 10**-8,gamma = 0.0003):
         #momentum variables
@@ -63,5 +76,20 @@ class LogisticRegression():
         #Updating the final value
         self.b = self.b - self.hat_m_b*self.r_v_b*gamma
         self.w = self.w - np.multiply(self.hat_m_w,self.r_v_w)*gamma
-    def parameters(self):
-        return [self.w,self.b]
+    def RMSprop(self,beta2 = 0.999,epsilon = 10**-8, gamma = 0.001):
+        self.v_w = beta2*self.v_w + (1-beta2)*(self.w_error**2)
+        self.v_b = beta2*self.v_b + (1-beta2)*(self.b_error**2)
+        self.r_v_w = 1 / (np.sqrt(self.v_w + epsilon))
+        self.r_v_b = 1 / (np.sqrt(self.v_b + epsilon))
+        self.b = self.b - self.b_error*self.r_v_b*gamma
+        self.w = self.w - np.multiply(self.w_error,self.r_v_w)*gamma
+    def momentum(self,beta1 = 0.9 , gamma = 0.001):
+        self.m_w = beta1*self.m_w + (1 - beta1)*self.w_error
+        self.m_b = beta1*self.m_b + (1 - beta1)*self.b_error
+        self.hat_m_w = self.m_w / (1 - beta1**self.epoch_count)
+        self.hat_m_b = self.m_b / (1 - beta1**self.epoch_count)
+        self.b = self.b - self.hat_m_b*gamma
+        self.w = self.w - self.hat_m_w*gamma
+    def gd(self,gamma = 0.005):
+        self.w = self.w - gamma*self.w_error
+        self.b = self.b - self.b_error*gamma
