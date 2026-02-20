@@ -7,7 +7,7 @@ def cyclic_encode(data : pd.DataFrame , columns):
     data[columns + "_cos"] = np.cos(2*np.pi*data[columns]/max_val)
     return data
 
-def log_transform(data ; pd.DataFrame, columns):
+def log_transform(data : pd.DataFrame, columns):
     try:
         data[columns + "_log"] = np.log(data[columns])
     except Exception as e:
