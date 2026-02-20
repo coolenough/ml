@@ -30,3 +30,4 @@ def Transformer(data : pd.DataFrame,func : str,columns):
     if func not in funcs:
         raise Exception(f"{func} is not avilable please selct one from {funcs.keys()}")
     data = funcs[func](data , columns)
+    return data
