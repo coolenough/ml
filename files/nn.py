@@ -133,7 +133,6 @@ class Neuron:
                 if last_node not in processed:
                   topo.append(last_node)
                   processed.add(last_node)
-            print(topo)
             return topo
 
         topo = topo_sort(visited = visited,processed=processed)
