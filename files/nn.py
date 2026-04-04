@@ -3,7 +3,7 @@ class Neuron:
         self.data = data
         self.grad = 0
         self.children = children
-        self._backward = lambda : None
+        self._backward = _backward
     def __mul__(self,other):
         other = other if isinstance(other,Neuron) else Neuron(other)
         out = Neuron(self.data*other.data)
@@ -38,22 +38,10 @@ class Neuron:
             self.grad += out.grad*1 if self.data > 0 else 0
         out._backward = _backward
         return out
-    def __truediv__(self,other):
-        other = other if isinstance(other,Neuron) else Neuron(other)
-        def _backward():
-            self.grad += out.grad/other.data
-            other.grad += -(self.data / (other.data ** 2)) * out.grad
-        try:
-            out = self.data/other.data
-            return Neuron(out , children = (self,other),_backward = _backward)
-        except ZeroDivisionError:
-            out = Neuron(0)
-        def _backward():
-            self.grad += out.grad/other.data
-            other.grad += -(self.data / (other.data ** 2)) * out.grad
-        out.children = (self,other)
-        out._backward = _backward
-        return out
+    def __truediv__(self, other):
+        # Instead of complex math, use: a / b = a * (b**-1)
+        return self * (other**-1)
+
     def __pow__(self,other : float):
         # other = other if isinstance(other,Neuron) else Neuron(other) we are not doing this cuz
         # if other.data < 0 we might have to face a problem of get undefined
@@ -91,19 +79,13 @@ class Neuron:
             other.grad += self.data*out.grad
         out._backward = _backward
         return out
-    def __rtruediv__(self,other):
-        other = other if isinstance(other,Neuron) else Neuron(other)
-        def _backward():
-            self.grad += out.grad/other.data
-            other.grad += -(self.data / (other.data ** 2)) * out.grad
-        try:
-            out = self.data/other.data
-            return Neuron(out,children = (self,other),_backward = _backward)
-        except ZeroDivisionError:
-            out = Neuron(0)
-        out.children = (self,other)
-        out._backward = _backward
-        return out
+
+
+    def __rtruediv__(self, other):
+        # Instead of complex math, use: b / a = b * (a**-1)
+        other = other if isinstance(other, Neuron) else Neuron(other)
+        return other * (self**-1)
+
     def __rpow__(self,other : float):
         out = Neuron(self.data**other)
         def _backward():
@@ -130,14 +112,31 @@ class Neuron:
     def backward(self):
         self.grad = 1
         visited = set()
-        topo = list()
-        def topo_sort(n : Neuron,visited : set,topo : list):
-            if n not in visited:
-                visited.add(n)
-            for child in n.children:
-                topo_sort(child, visited, topo)
-            topo.append(n)
-        topo_sort(self,visited, topo)
+        processed = set()
+        
+        def topo_sort(visited : set,processed : set):
+            stack = [self]
+            topo = list()
+            while stack:
+              last_node = stack[-1]
+              ## accesing last node
+
+              if last_node not in visited:
+                visited.add(last_node)
+
+                for child in last_node.children:
+                  if child not in visited:
+                    stack.append(child)
+
+              else:
+                stack.pop()
+                if last_node not in processed:
+                  topo.append(last_node)
+                  processed.add(last_node)
+            print(topo)
+            return topo
+
+        topo = topo_sort(visited = visited,processed=processed)
         for n in reversed(topo):
             n._backward()
 class Module:
